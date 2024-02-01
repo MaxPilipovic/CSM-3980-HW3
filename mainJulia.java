@@ -9,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.geom.Point2D;
 import java.awt.image.MemoryImageSource;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -33,12 +34,14 @@ public class mainJulia {
     private static final double CENTER_Y = 0.0;
     private static final double WIDTH = 3.25;
     private static final double HEIGHT = 3.25;
+    private static AtomicInteger sharedCounter = new AtomicInteger(0);
 
     //Maximum number of iterations before a number is declared in the Julia set
     public static final int MAX_ITERATIONS = 100;
 
     //Distance from beyond which a point is not in the set
     public static final double THRESHOLD = 2.0;
+
     //private static final int WRONG_NUMBER_OF_ARGS_ERROR = 1; //not needed
     //private static final int BAD_ARG_ERROR = 2;
 
@@ -68,34 +71,44 @@ public class mainJulia {
         System.out.printf("Running with %d threads on %d CPU cores.", numberOfThreads, Runtime.getRuntime().availableProcessors());
 
         //Make space for the image
-        int[] imageData = new int[size * size];
+        int[] data = new int[size * size];
 
         //Start clock
         final Stopwatch watch = new Stopwatch();
 
-        //Make a threads for drawing. The values are passed to the
-        //Constructor, but we could have made them global.
-        final List<JuliaDrawingThread> juliaDrawingThreads = new LinkedList<>();
-        for (int threadNumber = 0; threadNumber < numberOfThreads; threadNumber++) {
-            JuliaDrawingThread thread = new JuliaDrawingThread(imageData, a, b, threadNumber, numberOfThreads, size, model);
-            juliaDrawingThreads.add(thread);
-            thread.start();
-        }
 
-        //Wait for the threads to be done
-        for (JuliaDrawingThread t : juliaDrawingThreads) {
-            try {
-                t.join();
-            } catch (InterruptedException ex) {
-                System.err.println("Execution was Interrupted!");
+        if (numberOfThreads == 1) {
+            //Run single-threaded mode
+            for (int row = 0; row < size; row++) {
+                for (int column = 0; column < size; column++) {
+                    final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                    data[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                }
+            }
+        } else {
+            //Make a threads for drawing. The values are passed to the
+            //Constructor, but we could have made them global.
+            final List<JuliaDrawingThread> juliaDrawingThreads = new LinkedList<>();
+            for (int threadNumber = 0; threadNumber < numberOfThreads; threadNumber++) {
+                JuliaDrawingThread thread = new JuliaDrawingThread(data, a, b, threadNumber, numberOfThreads, size, model);
+                juliaDrawingThreads.add(thread);
+                thread.start();
+            }
+
+            //Wait for the threads to be done
+            for (JuliaDrawingThread t : juliaDrawingThreads) {
+                try {
+                    t.join();
+                } catch (InterruptedException ex) {
+                    System.err.println("Execution was Interrupted!");
+                }
             }
         }
-
         //Stop the clock
         System.out.printf("Drawing took %f seconds\n", watch.elapsedTime());
 
         //Show the image
-        saveImage(imageData, size);
+        saveImage(data, size);
     }
 
     //Print a given message and some basic usage information
@@ -106,6 +119,7 @@ public class mainJulia {
         System.err.printf("\tb: the Julia set's b constant [%f, %f]\n", MIN_B, MAX_B);
         System.err.printf("\tsize: the height and width for the image [%d, %d]\n", MIN_SIZE, MAX_SIZE);
         System.err.printf("\tthreads: the number of threads to use [%d, %d]\n", MIN_THREADS, MAX_THREADS);
+        System.err.printf("\tthread model: the thread model to use [%d, %d]\n", MIN_MODEL, MAX_MODEL);
     }
 
     //Parse the given string s as a double and check that it is within the given range. If not
@@ -143,9 +157,9 @@ public class mainJulia {
         return result;
     }
 
-    private static void saveImage(int[] imageData, int size) {
+    private static void saveImage(int[] data, int size) {
         BufferedImage julia = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
-        julia.setRGB(0,0, size, size, imageData, 0, size);
+        julia.setRGB(0,0, size, size, data, 0, size);
         try {
             ImageIO.write(julia, "png", new File("julia.png"));
         } catch (IOException e) {
@@ -222,21 +236,53 @@ public class mainJulia {
         public void run() {
             if (model == 1 ) {
                 //rowStride();
+                for (int row = startingRow; row < size; row += numberOfThreads) {
+                    for (int column = 0; column < size; column++) {
+                        final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                        buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                    }
+                }
             }
             else if (model == 2) {
-                //blockStride();
+                //blockSride(); //2 is size of block (rows)
+                for (int block = startingRow * 2; block < size; block += numberOfThreads) {
+                    for (int column = 0; column < size; column++) {
+                        final Point2D.Double cartesianPoint = convertScreenToCartesian(column, block, size, size);
+                        buffer[block * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                    }
+                }
             }
             else if (model == 3) {
                 //pixelStride();
+                for (int threadID = startingRow; threadID < size * size; threadID += numberOfThreads) {
+                    int row = threadID / size;
+                    int column = threadID % size;
+                    final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                    buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                }
             }
             else if (model == 4) {
                 //nextfreeRow();
+                int row;
+                while ((row = sharedCounter.incrementAndGet()) < size) {
+                    for (int column = 0; column < size; column++) {
+                        final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                        buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                    }
+                }
             }
             else if (model == 5) {
                 //nextfreePixel();
+                int threadID;
+                while ((threadID = sharedCounter.incrementAndGet()) < size) {
+                    int row = threadID / size;
+                    int column = threadID % size;
+                    final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                    buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                }
             }
             else if (model == 6) {
-                //nextfreeBlock();
+                int block = startingRow * 2;
             }
 
 
