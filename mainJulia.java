@@ -159,7 +159,7 @@ public class mainJulia {
 
     private static void saveImage(int[] data, int size) {
         BufferedImage julia = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
-        julia.setRGB(0,0, size, size, data, 0, size);
+        julia.setRGB(0, 0, size, size, data, 0, size);
         try {
             ImageIO.write(julia, "png", new File("julia.png"));
         } catch (IOException e) {
@@ -234,58 +234,73 @@ public class mainJulia {
         //The drawing code
         @Override
         public void run() {
-            if (model == 1 ) {
+            if (model == 1) {
                 //rowStride();
+                //Iterate over rows assigned to each thread
                 for (int row = startingRow; row < size; row += numberOfThreads) {
                     for (int column = 0; column < size; column++) {
                         final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                         buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                     }
                 }
-            }
-            else if (model == 2) {
+            } else if (model == 2) {
                 //blockSride(); //2 is size of block (rows)
-                for (int block = startingRow * 2; block < size; block += numberOfThreads) {
-                    for (int column = 0; column < size; column++) {
-                        final Point2D.Double cartesianPoint = convertScreenToCartesian(column, block, size, size);
-                        buffer[block * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                //Iterates over blocks with a size of (2 rows) assigned to each thread
+                for (int block = startingRow * 2; block < size; block += numberOfThreads * 2) {
+                    //Prevents us from going out of bounds, checks block size is less then 2 & does not exceed total rows
+                    for (int offset = 0; offset < 2 && (block + offset) < size; offset++) {
+                        int row = block + offset;
+                        for (int column = 0; column < size; column++) {
+                            final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                            buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                        }
+
                     }
                 }
-            }
-            else if (model == 3) {
+            } else if (model == 3) {
                 //pixelStride();
+                //Iterates over pixels assigned to thread.
                 for (int threadID = startingRow; threadID < size * size; threadID += numberOfThreads) {
                     int row = threadID / size;
                     int column = threadID % size;
                     final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                     buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                 }
-            }
-            else if (model == 4) {
+            } else if (model == 4) {
                 //nextfreeRow();
                 int row;
+                //Used atomic integer because it was the fastest counter in hw2
+                //While loop to iterate over rows
                 while ((row = sharedCounter.incrementAndGet()) < size) {
                     for (int column = 0; column < size; column++) {
                         final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                         buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                     }
                 }
-            }
-            else if (model == 5) {
+            } else if (model == 5) {
                 //nextfreePixel();
                 int threadID;
-                while ((threadID = sharedCounter.incrementAndGet()) < size) {
+                //Iterating over pixels
+                while ((threadID = sharedCounter.incrementAndGet()) < size * size) {
                     int row = threadID / size;
                     int column = threadID % size;
                     final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                     buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                 }
+            } else if (model == 6) {
+                int index;
+                //nextfreeBlock();
+                //Iterating over blocks
+                while ((index = sharedCounter.getAndAdd(2)) < size) {
+                    for (int offset = 0; offset < 2 && (index + offset) < size; offset++) {
+                        int row = index + offset;
+                        for (int column = 0; column < size; column++) {
+                            final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
+                            buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
+                        }
+                    }
+                }
             }
-            else if (model == 6) {
-                int block = startingRow * 2;
-            }
-
-
         }
     }
 }
