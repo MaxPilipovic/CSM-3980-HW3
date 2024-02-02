@@ -22,7 +22,7 @@ public class mainJulia {
     private static final double MIN_B = -1.0;
     private static final double MAX_B = 1.0;
     private static final int MIN_SIZE = 1;
-    private static final int MAX_SIZE = 2048;
+    private static final int MAX_SIZE = 16384;
     private static final int MIN_THREADS = 1;
     private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
 
@@ -225,7 +225,7 @@ public class mainJulia {
             this.buffer = buffer;
             this.a = a;
             this.b = b;
-            this.startingRow = startingRow;
+            this.startingRow = startingRow; //change name
             this.numberOfThreads = numberOfThreads;
             this.size = size;
             this.model = model;
