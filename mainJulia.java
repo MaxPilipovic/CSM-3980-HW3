@@ -22,7 +22,7 @@ public class mainJulia {
     private static final double MIN_B = -1.0;
     private static final double MAX_B = 1.0;
     private static final int MIN_SIZE = 1;
-    private static final int MAX_SIZE = 16384;
+    private static final int MAX_SIZE = 2048;
     private static final int MIN_THREADS = 1;
     private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
 
@@ -246,9 +246,9 @@ public class mainJulia {
             } else if (model == 2) {
                 //blockSride(); //2 is size of block (rows)
                 //Iterates over blocks with a size of (2 rows) assigned to each thread
-                for (int block = startingRow * 5; block < size; block += numberOfThreads * 5) {
+                for (int block = startingRow * 2; block < size; block += numberOfThreads * 2) {
                     //Prevents us from going out of bounds, checks block size is less then 2 & does not exceed total rows
-                    for (int offset = 0; offset < 5 && (block + offset) < size; offset++) {
+                    for (int offset = 0; offset < 2 && (block + offset) < size; offset++) {
                         int row = block + offset;
                         for (int column = 0; column < size; column++) {
                             final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
@@ -291,8 +291,8 @@ public class mainJulia {
                 int index;
                 //nextfreeBlock();
                 //Iterating over blocks
-                while ((index = sharedCounter.getAndAdd(5)) < size) {
-                    for (int offset = 0; offset < 5 && (index + offset) < size; offset++) {
+                while ((index = sharedCounter.getAndAdd(2)) < size) {
+                    for (int offset = 0; offset < 2 && (index + offset) < size; offset++) {
                         int row = index + offset;
                         for (int column = 0; column < size; column++) {
                             final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
