@@ -246,9 +246,9 @@ public class mainJulia {
             } else if (model == 2) {
                 //blockSride(); //2 is size of block (rows)
                 //Iterates over blocks with a size of (2 rows) assigned to each thread
-                for (int block = startingRow * 4; block < size; block += numberOfThreads * 4) {
+                for (int block = startingRow * 5; block < size; block += numberOfThreads * 5) {
                     //Prevents us from going out of bounds, checks block size is less then 2 & does not exceed total rows
-                    for (int offset = 0; offset < 4 && (block + offset) < size; offset++) {
+                    for (int offset = 0; offset < 5 && (block + offset) < size; offset++) {
                         int row = block + offset;
                         for (int column = 0; column < size; column++) {
                             final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
@@ -291,8 +291,8 @@ public class mainJulia {
                 int index;
                 //nextfreeBlock();
                 //Iterating over blocks
-                while ((index = sharedCounter.getAndAdd(4)) < size) {
-                    for (int offset = 0; offset < 4 && (index + offset) < size; offset++) {
+                while ((index = sharedCounter.getAndAdd(5)) < size) {
+                    for (int offset = 0; offset < 5 && (index + offset) < size; offset++) {
                         int row = index + offset;
                         for (int column = 0; column < size; column++) {
                             final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
