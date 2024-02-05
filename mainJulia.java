@@ -229,6 +229,7 @@ public class mainJulia {
             this.numberOfThreads = numberOfThreads;
             this.size = size;
             this.model = model;
+            //edit names
         }
 
         //The drawing code
@@ -260,9 +261,9 @@ public class mainJulia {
             } else if (model == 3) {
                 //pixelStride();
                 //Iterates over pixels assigned to thread.
-                for (int threadID = startingRow; threadID < size * size; threadID += numberOfThreads) {
-                    int row = threadID / size;
-                    int column = threadID % size;
+                for (int pixel = startingRow; pixel < size * size; pixel += numberOfThreads) {
+                    int row = pixel / size;
+                    int column = pixel % size;
                     final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                     buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                 }
@@ -279,11 +280,11 @@ public class mainJulia {
                 }
             } else if (model == 5) {
                 //nextfreePixel();
-                int threadID;
+                int pixel;
                 //Iterating over pixels
-                while ((threadID = sharedCounter.incrementAndGet()) < size * size) {
-                    int row = threadID / size;
-                    int column = threadID % size;
+                while ((pixel = sharedCounter.incrementAndGet()) < size * size) {
+                    int row = pixel / size;
+                    int column = pixel % size;
                     final Point2D.Double cartesianPoint = convertScreenToCartesian(column, row, size, size);
                     buffer[row * size + column] = juliaColor(cartesianPoint.getX(), cartesianPoint.getY(), a, b);
                 }
